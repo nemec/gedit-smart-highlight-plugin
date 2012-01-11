@@ -20,6 +20,10 @@ Features
     * English
     * Chinese
 
+<center>
+<img src="https://github.com/nemec/gedit-smart-highlight-plugin/raw/master/screenshot.png"\>
+</center>
+
 Installation
 ============
 
