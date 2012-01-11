@@ -64,14 +64,13 @@ class SmartHighlightingPlugin(
     GObject.Object.__init__(self)
     self.logger = logging.getLogger(APP_NAME)
     self.logger.setLevel(LOG_LEVEL)
+    self.update_colors = True
     self.settings = None
     if self.has_settings_schema:
       self.settings = Gio.Settings.new(self.SCHEMA_KEY)
     
-      self.settings.connect('changed::foreground-color',
-        self.on_foreground_color_change)
-      self.settings.connect('changed::background-color',
-        self.on_background_color_change)
+      self.settings.connect('changed::foreground-color', self.on_color_change)
+      self.settings.connect('changed::background-color', self.on_color_change)
     else:
       self.logger.warn("Settings schema not installed. "
                         "Plugin will not be configurable.")
@@ -94,10 +93,16 @@ class SmartHighlightingPlugin(
           not self.default_settings['regex_search'])):
       pattern = re.escape(pattern)
     
-    if self.settings.get_boolean('match-whole-word'):
+    if ((self.has_settings_schema and
+          self.settings.get_boolean('match-whole-word')) or
+        (not self.has_settings_schema and
+          self.default_settings['match-whole-word'])):
       pattern = r'\b%s\b' % pattern
       
-    if self.settings.get_boolean('match-case'):
+    if ((self.has_settings_schema and
+          self.settings.get_boolean('match-case')) or
+        (not self.has_settings_schema and
+          self.default_settings['match-case'])):
       regex = re.compile(pattern, re.MULTILINE)
     else:
       regex = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
@@ -124,11 +129,13 @@ class SmartHighlightingPlugin(
     else:
       self.smart_highlight_off(textbuffer)
 
+
   def fill_tag_table(self, buf):
     """Set the foreground and background tag colors for the current buffer."""
-    if buf.get_tag_table().lookup('smart_highlight') != None:
-      start, end = buf.get_bounds()
-      buf.remove_tag_by_name('smart_highlight', start, end)
+    self.update_colors = False
+    tag = buf.get_tag_table().lookup('smart_highlight')
+    if tag != None:
+      buf.get_tag_table().remove(tag)
     # Get valid foreground color
     fg = self.default_settings['foreground-color']
     if self.has_settings_schema:
@@ -145,7 +152,8 @@ class SmartHighlightingPlugin(
 
   def smart_highlight_on(self, buf, highlight_start, highlight_len):
     """Apply color tag to textbuffer at matched location."""
-    if buf.get_tag_table().lookup('smart_highlight') == None:
+    if (self.update_colors or
+        buf.get_tag_table().lookup('smart_highlight') == None):
       self.fill_tag_table(buf)
     buf.apply_tag_by_name('smart_highlight',
       buf.get_iter_at_offset(highlight_start),
@@ -154,23 +162,23 @@ class SmartHighlightingPlugin(
   def smart_highlight_off(self, buf):
     """Remove color tag from textbuffer."""
     start, end = buf.get_bounds()
-    if buf.get_tag_table().lookup('smart_highlight') == None:
+    if (self.update_colors or
+        buf.get_tag_table().lookup('smart_highlight') == None):
       self.fill_tag_table(buf)
     buf.remove_tag_by_name('smart_highlight', start, end)
 
   def do_create_configure_widget(self):
-    return Config().get_widget()
+    return Config(self.has_settings_schema, self.settings).get_widget()
 
-  def on_foreground_color_change(self, settings, key):
-    pass
-
-  def on_background_color_change(self, settings, key):
-    pass
+  def on_color_change(self, settings, key):
+    self.update_colors = True
 
 
 class Config(object):
-  def __init__(self, has_schema):
-    self.logger = logging.get_logger(APP_NAME)
+  def __init__(self, has_settings_schema, settings):
+    self.has_settings_schema = has_settings_schema
+    self.settings = settings
+    self.logger = logging.getLogger(APP_NAME)
     
   def get_widget(self):
     gladefile = os.path.join(os.path.dirname(__file__),"config.glade")
@@ -185,26 +193,26 @@ class Config(object):
     fgColorbutton = UI.get_object("fgColorbutton")
     bgColorbutton = UI.get_object("bgColorbutton")
     
-    matchWholeWordCheckbutton.set_active(self.settings.get_boolean('match-whole-word'))
-    matchCaseCheckbutton.set_active(self.settings.get_boolean('match-case'))
-    regexSearchCheckbutton.set_active(self.settings.get_boolean('regex-search'))
-    fgColorbutton.set_color(
-      Gdk.color_parse(self.settings.get_string('foreground-color')) or
-        Gdk.color_parse(self.default_settings['foreground-color']))
-    bgColorbutton.set_color(
-      Gdk.color_parse(self.settings.get_string('background-color')) or
-        Gdk.color_parse(self.default_settings['background-color']))
-    
-    signals = {
-      "on_matchWholeWordCheckbutton_toggled": self.on_matchWholeWordCheckbutton_toggled,
-      "on_matchCaseCheckbutton_toggled": self.on_matchCaseCheckbutton_toggled,
-      "on_regexSearchCheckbutton_toggled": self.on_regexSearchCheckbutton_toggled,
-      "on_fgColorbutton_color_set": self.on_fgColorbutton_color_set,
-      "on_bgColorbutton_color_set": self.on_bgColorbutton_color_set
-    }
-    UI.connect_signals(signals)
-
-    if not self.has_settings_schema:
+    if self.has_settings_schema:
+      matchWholeWordCheckbutton.set_active(self.settings.get_boolean('match-whole-word'))
+      matchCaseCheckbutton.set_active(self.settings.get_boolean('match-case'))
+      regexSearchCheckbutton.set_active(self.settings.get_boolean('regex-search'))
+      fgColorbutton.set_color(
+        Gdk.color_parse(self.settings.get_string('foreground-color')) or
+          Gdk.color_parse(self.default_settings['foreground-color']))
+      bgColorbutton.set_color(
+        Gdk.color_parse(self.settings.get_string('background-color')) or
+          Gdk.color_parse(self.default_settings['background-color']))
+      
+      signals = {
+        "on_matchWholeWordCheckbutton_toggled": self.on_matchWholeWordCheckbutton_toggled,
+        "on_matchCaseCheckbutton_toggled": self.on_matchCaseCheckbutton_toggled,
+        "on_regexSearchCheckbutton_toggled": self.on_regexSearchCheckbutton_toggled,
+        "on_fgColorbutton_color_set": self.on_fgColorbutton_color_set,
+        "on_bgColorbutton_color_set": self.on_bgColorbutton_color_set
+      }
+      UI.connect_signals(signals)
+    else:
       self.logger.warn("Configuration disabled because settings schema "
                         "is not installed.")
       widget.set_sensitive(False)
