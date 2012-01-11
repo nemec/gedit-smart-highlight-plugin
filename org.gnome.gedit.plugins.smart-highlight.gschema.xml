@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.gedit.plugins.smart-highlight"
+      path="/org/gnome/gedit/plugins/smart-highlight/">
+    <key type="b" name="match-whole-word">
+      <default>true</default>
+      <summary>Match Whole Word</summary>
+      <description>Must match whole word to select.</description>
+    </key>
+    <key type="b" name="match-case">
+      <default>true</default>
+      <summary>Match Case</summary>
+      <description>Perform case-sensitive matching.</description>
+    </key>
+    <key type="b" name="regex-search">
+      <default>false</default>
+      <summary>Regex Search</summary>
+      <description>Use match as a regular expression.</description>
+    </key>
+    <key type="s" name="foreground-color">
+      <default>'#ffffff'</default>
+      <summary>Foreground Color</summary>
+      <description>Foreground highlight color.</description>
+    </key>
+    <key type="s" name="background-color">
+      <default>'#000000'</default>
+      <summary>Background Color</summary>
+      <description>Background highlight color.</description>
+    </key>
+  </schema>
+</schemalist>
