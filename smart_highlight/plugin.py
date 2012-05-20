@@ -54,7 +54,6 @@ class SmartHighlightingPlugin(
   default_settings = {
     'match-whole-word': True,
     'match-case': False,
-    'regex-search': False,
     'foreground-color': '#ffffff',
     'background-color': '#000000'
   }
@@ -86,13 +85,7 @@ class SmartHighlightingPlugin(
     return self.SCHEMA_KEY in Gio.Settings.list_schemas()
 
   def create_regex(self, pattern):
-    pattern = unicode(r'%s' % pattern, "utf-8")
-    if ((self.has_settings_schema and
-          not self.settings.get_boolean('regex-search')) or
-        (not self.has_settings_schema and
-          not self.default_settings['regex_search'])):
-      pattern = re.escape(pattern)
-    
+    pattern = re.escape(unicode(r'%s' % pattern, "utf-8"))
     if ((self.has_settings_schema and
           self.settings.get_boolean('match-whole-word')) or
         (not self.has_settings_schema and
@@ -110,15 +103,15 @@ class SmartHighlightingPlugin(
     return regex
 
   def smart_highlighting_action(self, buf, search_pattern):
-    regex = self.create_regex(search_pattern)
     self.smart_highlight_off(buf)
+    if re.search('\W', search_pattern):
+      return  # Only match up to one word
+    regex = self.create_regex(search_pattern)
     start, end = buf.get_bounds()
     text = unicode(buf.get_text(start, end, True), 'utf-8')
     
-    match = regex.search(text)
-    while(match):
+    for match in regex.finditer(text):
       self.smart_highlight_on(buf, match.start(), match.end() - match.start())
-      match = regex.search(text, match.end()+1)
   
   def on_textbuffer_markset_event(self, textbuffer, iter, textmark):
     if textmark.get_name() == None:
@@ -189,14 +182,12 @@ class Config(object):
     
     matchWholeWordCheckbutton = UI.get_object("matchWholeWordCheckbutton")
     matchCaseCheckbutton = UI.get_object("matchCaseCheckbutton")
-    regexSearchCheckbutton = UI.get_object("regexSearchCheckbutton")
     fgColorbutton = UI.get_object("fgColorbutton")
     bgColorbutton = UI.get_object("bgColorbutton")
     
     if self.has_settings_schema:
       matchWholeWordCheckbutton.set_active(self.settings.get_boolean('match-whole-word'))
       matchCaseCheckbutton.set_active(self.settings.get_boolean('match-case'))
-      regexSearchCheckbutton.set_active(self.settings.get_boolean('regex-search'))
       fgColorbutton.set_color(
         Gdk.color_parse(self.settings.get_string('foreground-color')) or
           Gdk.color_parse(self.default_settings['foreground-color']))
@@ -207,7 +198,6 @@ class Config(object):
       signals = {
         "on_matchWholeWordCheckbutton_toggled": self.on_matchWholeWordCheckbutton_toggled,
         "on_matchCaseCheckbutton_toggled": self.on_matchCaseCheckbutton_toggled,
-        "on_regexSearchCheckbutton_toggled": self.on_regexSearchCheckbutton_toggled,
         "on_fgColorbutton_color_set": self.on_fgColorbutton_color_set,
         "on_bgColorbutton_color_set": self.on_bgColorbutton_color_set
       }
@@ -224,9 +214,6 @@ class Config(object):
     
   def on_matchCaseCheckbutton_toggled(self, widget):
     self.settings.set_boolean('match-case', widget.get_active())
-  
-  def on_regexSearchCheckbutton_toggled(self, widget):
-    self.settings.set_boolean('regex-search', widget.get_active())
     
   def on_fgColorbutton_color_set(self, widget):
     self.settings.set_string('foreground-color', widget.get_color().to_string())

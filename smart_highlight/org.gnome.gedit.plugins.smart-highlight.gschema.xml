@@ -12,11 +12,6 @@
       <summary>Match Case</summary>
       <description>Perform case-sensitive matching.</description>
     </key>
-    <key type="b" name="regex-search">
-      <default>false</default>
-      <summary>Regex Search</summary>
-      <description>Use match as a regular expression.</description>
-    </key>
     <key type="s" name="foreground-color">
       <default>'#ffffff'</default>
       <summary>Foreground Color</summary>
