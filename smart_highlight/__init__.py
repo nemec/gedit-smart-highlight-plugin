@@ -1,2 +1,1 @@
-import plugin
-from plugin import SmartHighlightingPlugin
+from .plugin import SmartHighlightingPlugin
