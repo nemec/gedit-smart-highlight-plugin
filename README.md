@@ -32,3 +32,8 @@ Installation
   the colors or other settings.
 2. Restart Gedit, then go to Edit->Preferences->Plugins and check the box next
   to `Smart Highlighting`.
+
+2016 Note
+=========
+
+It's been years since this project was last updated, but I can confirm this plugin still works in gedit 3.18.3, the version that comes with Ubuntu 16.4 LTS.
